@@ -1,0 +1,6 @@
+{
+  "name": "FindMatch: Lost & Found Matcher",
+  "description": "Visual and semantic lost-and-found item matcher that distinguishes near-identical items by stickers, scratches, logos, labels, and fine details.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
