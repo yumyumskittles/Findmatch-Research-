@@ -24,7 +24,24 @@ function hasValidExtension(filename: string): boolean {
 
 function hasValidMimeType(mimeType: string): boolean {
   const lower = mimeType.toLowerCase().trim();
-  return lower === 'image/jpeg' || lower === 'image/jpg' || lower === 'image/png';
+  return (
+    lower === 'image/jpeg' ||
+    lower === 'image/jpg' ||
+    lower === 'image/pjpeg' ||
+    lower === 'image/png' ||
+    lower === 'image/x-png'
+  );
+}
+
+function hasValidDeclaredType(file: File): boolean {
+  const hasMime = Boolean(file.type && file.type.trim().length > 0);
+  const hasExt = file.name.includes('.');
+
+  if (hasMime && !hasValidMimeType(file.type)) return false;
+  if (hasExt && !hasValidExtension(file.name)) return false;
+  if (!hasMime && !hasExt) return false;
+
+  return true;
 }
 
 function hasValidMagicBytes(bytes: Uint8Array): boolean {
@@ -180,7 +197,7 @@ export async function validateAndPreprocessImage(
     throw new ImageValidationError(INVALID_IMAGE_ERROR);
   }
 
-  if (!hasValidExtension(file.name) || !hasValidMimeType(file.type)) {
+  if (!hasValidDeclaredType(file)) {
     throw new ImageValidationError(INVALID_IMAGE_ERROR);
   }
 

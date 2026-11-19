@@ -55,12 +55,30 @@ function getErrorPayload(err: unknown): { status: number; message: string } {
     typeof err === 'object' && err !== null && 'status' in err
       ? Number((err as { status?: number }).status) || 500
       : 500;
-  const message =
+  let message =
     err instanceof Error
       ? err.message
       : typeof err === 'string'
         ? err
         : 'Gemini API request failed.';
+
+  // Unwrap nested JSON error string returned by @google/genai when applicable
+  if (message.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(message) as {
+        error?: { message?: string; status?: string };
+        message?: string;
+      };
+      if (parsed.error?.message) {
+        message = parsed.error.message;
+      } else if (parsed.message) {
+        message = parsed.message;
+      }
+    } catch {
+      // keep original message
+    }
+  }
+
   return { status: status >= 400 && status < 600 ? status : 500, message };
 }
 

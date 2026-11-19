@@ -270,23 +270,21 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         <div className="grid grid-cols-1 min-[900px]:grid-cols-12 gap-6">
           {/* Photo Picker */}
           <div className="min-[900px]:col-span-5 flex flex-col">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => singleInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  singleInputRef.current?.click();
-                }
+            <label
+              htmlFor="register-single-photo"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                void handleSingleFileChange(e.dataTransfer.files?.[0] || null);
               }}
               className="flex-1 min-h-[220px] rounded-[20px] border-2 border-dashed border-[#6C5CE7]/40 bg-[#FAF8FE] hover:border-[#6C5CE7] transition-colors flex flex-col items-center justify-center p-5 text-center cursor-pointer"
             >
               <input
+                id="register-single-photo"
                 ref={singleInputRef}
                 type="file"
-                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                className="hidden"
+                accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                className="sr-only"
                 onChange={(e) => {
                   void handleSingleFileChange(e.target.files?.[0] || null);
                   e.target.value = '';
@@ -316,7 +314,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
                   <p className="text-xs text-[#6B6B80] mt-1">JPG / JPEG or PNG</p>
                 </>
               )}
-            </div>
+            </label>
 
             {singleError && (
               <div
@@ -447,24 +445,24 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
 
           <div>
             <input
+              id="register-bulk-photos"
               ref={bulkInputRef}
               type="file"
               multiple
-              accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-              className="hidden"
+              accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+              className="sr-only"
               onChange={(e) => {
                 void handleBulkSelect(e.target.files);
                 e.target.value = '';
               }}
             />
-            <button
-              type="button"
-              onClick={() => bulkInputRef.current?.click()}
+            <label
+              htmlFor="register-bulk-photos"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[14px] border border-[#6C5CE7] text-[#6C5CE7] text-sm font-semibold hover:bg-[#6C5CE7] hover:text-white transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               <FolderPlus className="w-4 h-4" />
               <span>Select Multiple Photos</span>
-            </button>
+            </label>
           </div>
         </div>
 

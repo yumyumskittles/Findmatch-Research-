@@ -384,16 +384,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         <div className="grid grid-cols-1 min-[900px]:grid-cols-12 gap-6 items-stretch">
           {/* Drag-and-drop Zone */}
           <div className="min-[900px]:col-span-6 flex flex-col">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }
-              }}
+            <label
+              htmlFor="search-photo-input"
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragActive(true);
@@ -405,17 +397,18 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                 const dropped = e.dataTransfer.files?.[0] || null;
                 void handleFileSelection(dropped);
               }}
-              className={`flex-1 min-h-[220px] rounded-[20px] border-2 border-dashed transition-colors flex flex-col items-center justify-center p-6 text-center cursor-pointer ${
+              className={`relative flex-1 min-h-[220px] rounded-[20px] border-2 border-dashed transition-colors flex flex-col items-center justify-center p-6 text-center cursor-pointer ${
                 dragActive
                   ? 'border-[#6C5CE7] bg-[#F3EEFB]'
                   : 'border-[#6C5CE7]/40 bg-[#FAF8FE] hover:border-[#6C5CE7]'
               }`}
             >
               <input
+                id="search-photo-input"
                 ref={fileInputRef}
                 type="file"
-                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                className="hidden"
+                accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                className="sr-only"
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
                   void handleFileSelection(file);
@@ -452,7 +445,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
                   </p>
                 </>
               )}
-            </div>
+            </label>
 
             {/* Soft red validation alert under upload zone */}
             {validationError && (

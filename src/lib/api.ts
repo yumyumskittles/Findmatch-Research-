@@ -7,11 +7,30 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
 
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed (${res.status})`);
+  const rawText = await res.text();
+  let parsed: (T & { error?: string }) | null = null;
+  try {
+    parsed = JSON.parse(rawText) as T & { error?: string };
+  } catch {
+    parsed = null;
   }
-  return data;
+
+  if (!res.ok) {
+    const isHtml = rawText.trim().startsWith('<');
+    const serverMsg = isHtml ? '' : parsed?.error || rawText.trim();
+    if (res.status === 403) {
+      throw new Error(
+        serverMsg ||
+          'Access forbidden (403). If you are viewing the AI Studio preview or Shared URL, refresh your AI Studio session (and allow cookies for run.app) or check your Gemini API key in Settings > Secrets.',
+      );
+    }
+    throw new Error(serverMsg || `Request failed (${res.status})`);
+  }
+
+  if (!parsed) {
+    throw new Error('Unexpected non-JSON response from server.');
+  }
+  return parsed;
 }
 
 export async function extractVisualProfileApi(
