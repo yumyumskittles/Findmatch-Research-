@@ -1,35 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import type {
-  FoundItem,
-  MatchConfig,
-  PageId,
-  SearchExecutionResult,
-  SearchLogEntry,
-  TestCaseId,
-} from './types';
-import {
-  clearAllSearchLogs,
-  getAllFoundItems,
-  getAllSearchLogs,
-  saveFoundItem,
-  saveSearchLog,
-} from './lib/db';
+import type { FoundItem, MatchConfig, PageId, SearchExecutionResult } from './types';
+import { getAllFoundItems, saveFoundItem } from './lib/db';
 import { loadSampleFoundItems } from './lib/sampleData';
 import { Navbar } from './components/Navbar';
 import { SearchPage } from './components/SearchPage';
 import { RegisterPage } from './components/RegisterPage';
 import { ResultsView } from './components/ResultsView';
-import { EvaluationPage } from './components/EvaluationPage';
 import { AboutPage } from './components/AboutPage';
+
+// Image and description are combined: 60% photo, 40% description.
+const MATCH_CONFIG: MatchConfig = 'combined';
+const ALPHA = 0.6;
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>('search');
   const [items, setItems] = useState<FoundItem[]>([]);
-  const [logs, setLogs] = useState<SearchLogEntry[]>([]);
-  const [matchConfig, setMatchConfig] = useState<MatchConfig>('combined');
-  const [alpha, setAlpha] = useState<number>(0.6);
-  const [expectedItemId, setExpectedItemId] = useState<string>('');
-  const [testCaseTag, setTestCaseTag] = useState<TestCaseId | ''>('');
   const [latestResult, setLatestResult] = useState<SearchExecutionResult | null>(null);
   const [sampleLoadingText, setSampleLoadingText] = useState<string | null>(null);
   const [sampleError, setSampleError] = useState<string | null>(null);
@@ -39,15 +24,15 @@ export default function App() {
     setItems(loaded);
   }, []);
 
-  const refreshLogs = useCallback(async () => {
-    const loaded = await getAllSearchLogs();
-    setLogs(loaded);
-  }, []);
-
   useEffect(() => {
-    void refreshItems();
-    void refreshLogs();
-  }, [refreshItems, refreshLogs]);
+    refreshItems().catch((err) => {
+      setSampleError(
+        err instanceof Error
+          ? `Could not load items from Firebase: ${err.message}`
+          : 'Could not load items from Firebase.',
+      );
+    });
+  }, [refreshItems]);
 
   const handleRequestVerification = async (item: FoundItem) => {
     const updated: FoundItem = {
@@ -87,16 +72,6 @@ export default function App() {
     }
   };
 
-  const handleUpdateLogEntry = async (updated: SearchLogEntry) => {
-    await saveSearchLog(updated);
-    await refreshLogs();
-  };
-
-  const handleClearLogs = async () => {
-    await clearAllSearchLogs();
-    await refreshLogs();
-  };
-
   return (
     <div className="min-h-screen bg-[#9DB4D8] py-4 px-3 sm:py-8 sm:px-6 md:py-12 md:px-10">
       <div
@@ -125,15 +100,11 @@ export default function App() {
           {activePage === 'search' && (
             <SearchPage
               items={items}
-              matchConfig={matchConfig}
-              alpha={alpha}
-              expectedItemId={expectedItemId}
-              testCaseTag={testCaseTag}
-              onExpectedItemIdChange={setExpectedItemId}
-              onTestCaseTagChange={setTestCaseTag}
+              matchConfig={MATCH_CONFIG}
+              alpha={ALPHA}
               latestResult={latestResult}
               onSearchCompleted={setLatestResult}
-              onLogRecorded={refreshLogs}
+              onLogRecorded={async () => {}}
               onRequestVerification={handleRequestVerification}
               onLoadSampleData={handleLoadSampleData}
               sampleLoadingText={sampleLoadingText}
@@ -154,18 +125,6 @@ export default function App() {
               searchResult={latestResult}
               onRequestVerification={handleRequestVerification}
               onGoToSearch={() => setActivePage('search')}
-            />
-          )}
-
-          {activePage === 'evaluation' && (
-            <EvaluationPage
-              matchConfig={matchConfig}
-              alpha={alpha}
-              onConfigChange={setMatchConfig}
-              onAlphaChange={setAlpha}
-              logs={logs}
-              onUpdateLogEntry={handleUpdateLogEntry}
-              onClearLogs={handleClearLogs}
             />
           )}
 

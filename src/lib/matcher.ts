@@ -213,7 +213,7 @@ export async function executeLostItemSearch(params: {
     baselineMap.set(item.id, sBase);
   }
 
-  // Pure baseline mode requires 0 Gemini calls
+  // Pure baseline mode needs no AI calls
   if (config === 'baseline') {
     const rawCandidates: RankedCandidate[] = items.map((item) => {
       const sBase = baselineMap.get(item.id) ?? 0;
@@ -259,7 +259,7 @@ export async function executeLostItemSearch(params: {
   }
 
   // Check full-search cache keyed by (imageHash + description + config + alpha + dbSignature)
-  // Wait: cache Gemini visual profile, embedding, comparisons, and mark matches independently
+  // Wait: cache visual profile, embedding, comparisons, and mark matches independently
   // so repeated searches with the same (imageHash + description + config) return identical scores!
   const dbSig = items.map((i) => `${i.id}:${i.imageHash}:${i.updatedAt}`).join(',');
   const searchCacheKey = `search::${processedQuery.imageHash}::${trimmedDesc}::${config}::${alpha.toFixed(2)}::${dbSig}`;
@@ -281,7 +281,7 @@ export async function executeLostItemSearch(params: {
   }>(searchCacheKey);
 
   if (cachedResult) {
-    onProgress?.({ stage: 'Loading cached Gemini scores...', percent: 95 });
+    onProgress?.({ stage: 'Loading saved scores...', percent: 95 });
     const itemById = new Map(items.map((i) => [i.id, i]));
     const reconstructed: RankedCandidate[] = [];
     for (const r of cachedResult.rankedData) {

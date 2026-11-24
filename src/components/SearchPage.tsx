@@ -14,7 +14,6 @@ import type {
   FoundItem,
   MatchConfig,
   SearchExecutionResult,
-  TestCaseId,
 } from '../types';
 import {
   ImageValidationError,
@@ -31,10 +30,6 @@ interface SearchPageProps {
   items: FoundItem[];
   matchConfig: MatchConfig;
   alpha: number;
-  expectedItemId: string;
-  testCaseTag: TestCaseId | '';
-  onExpectedItemIdChange: (val: string) => void;
-  onTestCaseTagChange: (val: TestCaseId | '') => void;
   latestResult: SearchExecutionResult | null;
   onSearchCompleted: (result: SearchExecutionResult) => void;
   onLogRecorded: () => Promise<void>;
@@ -70,10 +65,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   items,
   matchConfig,
   alpha,
-  expectedItemId,
-  testCaseTag,
-  onExpectedItemIdChange,
-  onTestCaseTagChange,
   latestResult,
   onSearchCompleted,
   onLogRecorded,
@@ -95,7 +86,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   const [searching, setSearching] = useState(false);
   const [progress, setProgress] = useState<SearchProgressUpdate | null>(null);
   const [localResult, setLocalResult] = useState<SearchExecutionResult | null>(latestResult);
-  const [showEvalFields, setShowEvalFields] = useState(false);
 
   const activeSlide = HOW_IT_WORKS_SLIDES[slideIdx];
 
@@ -123,7 +113,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({
       setLocalResult(null);
       setValidationError(msg);
 
-      // Record rejected validation event in log for TC-05 auto-check visibility
+      // Keep a record of the rejected upload
       await saveSearchLog({
         id: `LOG-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         timestamp: new Date().toISOString(),
@@ -132,8 +122,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         alphaEffective: 0,
         queryDescription: description.trim(),
         queryImageHash: 'invalid-input',
-        expectedItemId: expectedItemId.trim() || undefined,
-        testCaseTag: testCaseTag || undefined,
         usedImageOnlyFallback: false,
         validationError: INVALID_IMAGE_ERROR,
         geminiCallsMade: 0,
@@ -173,8 +161,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
         items,
         config: matchConfig,
         alpha,
-        expectedItemId,
-        testCaseTag,
         onProgress: (p) => setProgress(p),
       });
 
@@ -327,59 +313,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={() => setShowEvalFields((v) => !v)}
-              className="px-3.5 py-2.5 rounded-[14px] text-xs font-medium text-[#6B6B80] hover:text-[#111111] hover:bg-[#F8F6FC] transition-colors cursor-pointer whitespace-nowrap shrink-0"
-            >
-              {showEvalFields ? 'Hide test tagging' : 'Tag for evaluation'}
-            </button>
           </div>
         </div>
-
-        {/* Optional Researcher Test Tagging Strip */}
-        {showEvalFields && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-[#F8F6FC]">
-            <div>
-              <label
-                htmlFor="search-expected-id"
-                className="block text-xs font-semibold text-[#333333] mb-1.5"
-              >
-                Expected Item ID (optional, for evaluation)
-              </label>
-              <input
-                id="search-expected-id"
-                type="text"
-                placeholder="e.g. FI-001"
-                value={expectedItemId}
-                onChange={(e) => onExpectedItemIdChange(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#E2DAF5] text-sm text-[#111111] focus:outline-none focus:border-[#6C5CE7]"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="search-tc-tag"
-                className="block text-xs font-semibold text-[#333333] mb-1.5"
-              >
-                Acceptance Test Case Tag (optional)
-              </label>
-              <select
-                id="search-tc-tag"
-                value={testCaseTag}
-                onChange={(e) => onTestCaseTagChange(e.target.value as TestCaseId | '')}
-                className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#E2DAF5] text-sm text-[#111111] focus:outline-none focus:border-[#6C5CE7]"
-              >
-                <option value="">None</option>
-                <option value="TC-01">TC-01 — Valid photo + description</option>
-                <option value="TC-02">TC-02 — Near-identical items</option>
-                <option value="TC-03">TC-03 — Photo only, no description</option>
-                <option value="TC-04">TC-04 — Item not in database</option>
-                <option value="TC-05">TC-05 — Unsupported / corrupted file</option>
-              </select>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 min-[900px]:grid-cols-12 gap-6 items-stretch">
           {/* Drag-and-drop Zone */}

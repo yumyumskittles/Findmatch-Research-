@@ -28,7 +28,7 @@ export const AboutPage: React.FC = () => {
             01. Multi-Stage Feature Extraction
           </h2>
           <p className="text-sm text-[#333333] leading-relaxed">
-            Every validated JPG/PNG is oriented, resized to a 1024px longest side, and analyzed locally with an 8×4×4 HSV histogram and 64-bit dHash, alongside a structured Gemini Flash visual profile and text embedding.
+            Every validated JPG/PNG is oriented, resized to a 1024px longest side, and analyzed locally with an 8×4×4 HSV histogram and 64-bit dHash, alongside an in-browser CLIP visual embedding and a text embedding of the description.
           </p>
         </div>
 
@@ -64,7 +64,7 @@ export const AboutPage: React.FC = () => {
             04. Privacy &amp; In-Person Verification
           </h2>
           <p className="text-sm text-[#333333] leading-relaxed">
-            All found-item records and logs persist locally in your browser via IndexedDB. FindMatch never declares ownership automatically — candidates always require in-person verification with lost-and-found staff.
+            All found-item records are saved in a Firebase Firestore database. FindMatch never declares ownership automatically — candidates always require in-person verification with lost-and-found staff.
           </p>
         </div>
       </div>

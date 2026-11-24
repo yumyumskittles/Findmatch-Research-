@@ -1,53 +1,62 @@
 import type { DistinctiveMark, VisualProfile } from '../types';
+import {
+  classifyCategory,
+  dominantColors,
+  embedImage,
+  embedSentence,
+  imageSimilarity,
+} from './localAI';
+import {
+  detectBrand,
+  detectCategoryFromText,
+  detectMaterial,
+  extractMarksFromText,
+  findMatchingMark,
+} from './textMarks';
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+// ---------------------------------------------------------------------------
+// Tunable numbers (adjust these after you try real photos)
+// ---------------------------------------------------------------------------
+// Raw photo similarity (0..1) below FLOOR scores 0, above CEIL scores 1.
+const IMAGE_SIM_FLOOR = 0.6;
+const IMAGE_SIM_CEIL = 0.98;
+// Score bonus / penalty per described mark that is found / missing on the item.
+const MARK_MATCH_BONUS = 0.12;
+const MARK_CONFLICT_PENALTY = 0.15;
 
-  const rawText = await res.text();
-  let parsed: (T & { error?: string }) | null = null;
-  try {
-    parsed = JSON.parse(rawText) as T & { error?: string };
-  } catch {
-    parsed = null;
-  }
-
-  if (!res.ok) {
-    const isHtml = rawText.trim().startsWith('<');
-    const serverMsg = isHtml ? '' : parsed?.error || rawText.trim();
-    if (res.status === 403) {
-      throw new Error(
-        serverMsg ||
-          'Access forbidden (403). If you are viewing the AI Studio preview or Shared URL, refresh your AI Studio session (and allow cookies for run.app) or check your Gemini API key in Settings > Secrets.',
-      );
-    }
-    throw new Error(serverMsg || `Request failed (${res.status})`);
-  }
-
-  if (!parsed) {
-    throw new Error('Unexpected non-JSON response from server.');
-  }
-  return parsed;
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n));
 }
 
 export async function extractVisualProfileApi(
   imageDataUrl: string,
   description?: string,
 ): Promise<VisualProfile> {
-  const res = await postJson<{ profile: VisualProfile }>('/api/gemini/extract-profile', {
-    imageBase64: imageDataUrl,
-    mimeType: 'image/jpeg',
-    description: description || '',
-  });
-  return res.profile;
+  const desc = (description || '').trim();
+  const [embeddings, colors] = await Promise.all([
+    embedImage(imageDataUrl),
+    dominantColors(imageDataUrl),
+  ]);
+
+  // The words you typed win; otherwise guess the category from the photo.
+  const category = detectCategoryFromText(desc) ?? (await classifyCategory(embeddings));
+  const marks = extractMarksFromText(desc);
+
+  const captionParts = [`${colors.join(' and ')} ${category}`.trim()];
+  if (marks.length > 0) captionParts.push(`with ${marks.map((m) => m.description).join('; ')}`);
+
+  return {
+    category,
+    main_colors: colors,
+    brand_or_logo: detectBrand(desc),
+    shape_material: detectMaterial(desc),
+    distinctive_marks: marks,
+    caption: captionParts.join(' '),
+  };
 }
 
 export async function embedTextApi(text: string): Promise<number[]> {
-  const res = await postJson<{ embedding: number[] }>('/api/gemini/embed', { text });
-  return res.embedding;
+  return embedSentence(text);
 }
 
 export interface CompareCandidatePayload {
@@ -72,14 +81,44 @@ export async function compareCandidatesApi(payload: {
   queryProfile: VisualProfile;
   candidates: CompareCandidatePayload[];
 }): Promise<CompareResultItem[]> {
-  const res = await postJson<{ results: CompareResultItem[] }>('/api/gemini/compare', {
-    queryImageBase64: payload.queryImageBase64,
-    queryMimeType: 'image/jpeg',
-    queryDescription: payload.queryDescription,
-    queryProfile: payload.queryProfile,
-    candidates: payload.candidates,
-  });
-  return res.results;
+  const queryEmb = await embedImage(payload.queryImageBase64);
+  const queryMarks = payload.queryProfile.distinctive_marks || [];
+  const results: CompareResultItem[] = [];
+
+  for (const cand of payload.candidates) {
+    const candEmb = await embedImage(cand.imageBase64);
+    const rawSim = imageSimilarity(queryEmb, candEmb);
+    let score = clamp01((rawSim - IMAGE_SIM_FLOOR) / (IMAGE_SIM_CEIL - IMAGE_SIM_FLOOR));
+
+    const matching: string[] = [];
+    const conflicting: string[] = [];
+    const candMarks = cand.profile?.distinctive_marks || [];
+
+    for (const qm of queryMarks) {
+      const hit = findMatchingMark(qm, candMarks, cand.description || '');
+      if (hit) {
+        matching.push(`Both show: ${qm.description}`);
+        score += MARK_MATCH_BONUS;
+      } else {
+        conflicting.push(`Described "${qm.description}" is not listed on this item`);
+        score -= MARK_CONFLICT_PENALTY;
+      }
+    }
+    score = clamp01(score);
+
+    const simPct = Math.round(clamp01(rawSim) * 100);
+    results.push({
+      item_id: cand.item_id,
+      visual_score: score,
+      matching_features: matching,
+      conflicting_features: conflicting,
+      reason:
+        `Overall photo similarity ${simPct}%. ` +
+        (matching.length ? `${matching.length} described mark(s) found. ` : '') +
+        (conflicting.length ? `${conflicting.length} described mark(s) not found.` : ''),
+    });
+  }
+  return results;
 }
 
 export interface MarkMatchResultItem {
@@ -97,6 +136,13 @@ export async function matchDistinctiveMarksApi(payload: {
     marks: DistinctiveMark[];
   }>;
 }): Promise<MarkMatchResultItem[]> {
-  const res = await postJson<{ matches: MarkMatchResultItem[] }>('/api/gemini/match-marks', payload);
-  return res.matches;
+  return payload.candidates.map((cand) => {
+    const terms: string[] = [];
+    for (const qm of payload.queryMarks) {
+      if (findMatchingMark(qm, cand.marks || [], cand.description || '')) {
+        terms.push(qm.description);
+      }
+    }
+    return { item_id: cand.item_id, matched_count: terms.length, matched_terms: terms };
+  });
 }

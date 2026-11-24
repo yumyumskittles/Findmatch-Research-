@@ -54,7 +54,8 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
 }
 
 export function rescaleTextCosine(cos: number): number {
-  return Math.max(0, Math.min(1, (cos - 0.5) / 0.5));
+  // Sentence-embedding cosines: unrelated text is ~0.2, near-identical ~0.9.
+  return Math.max(0, Math.min(1, (cos - 0.2) / 0.7));
 }
 
 export function computeTextScore(

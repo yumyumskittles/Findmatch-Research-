@@ -13,7 +13,6 @@ const NAV_ITEMS: Array<{ id: PageId; label: string }> = [
   { id: 'search', label: 'Search' },
   { id: 'register', label: 'Register Item' },
   { id: 'results', label: 'Results' },
-  { id: 'evaluation', label: 'Evaluation' },
   { id: 'about', label: 'About' },
 ];
 
@@ -192,7 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <div className="pt-6 border-t border-[#6C5CE7]/15 text-xs text-[#6B6B80] space-y-1">
               <p className="font-medium text-[#333333]">Thesis Prototype</p>
-              <p>{itemCount} found item(s) stored in browser IndexedDB.</p>
+              <p>{itemCount} found item(s) saved in the database.</p>
             </div>
           </div>
         </div>
